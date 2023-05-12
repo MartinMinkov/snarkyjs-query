@@ -2,21 +2,19 @@ import { type NextPage } from "next";
 import { useCallback, useState } from "react";
 import Head from "next/head";
 import { api } from "~/utils/api";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 
 import { Spinner } from "~/components/spinner";
-import Link from "next/link";
 
 const Home: NextPage = () => {
   const mutation = api.query.query.useMutation();
 
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
-  const [sources, setSources] = useState<
-    {
-      source: string;
-    }[]
-  >([]);
+  // const [sources, setSources] = useState<
+  //   {
+  //     source: string;
+  //   }[]
+  // >([]);
 
   const onInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,14 +32,15 @@ const Home: NextPage = () => {
         const response = await mutation.mutateAsync({ query: question });
         console.log(response.parsedQuery);
         const answer = response.parsedQuery.text;
-        const sources = response.parsedQuery.sourceDocuments.map((document) => {
-          const { metadata } = document;
-          return {
-            source: metadata.source,
-          };
-        });
         setAnswer(answer);
-        setSources(sources);
+
+        // const sources = response.parsedQuery.sourceDocuments.map((document) => {
+        //   const { metadata } = document;
+        //   return {
+        //     source: metadata.source,
+        //   };
+        // });
+        // setSources(sources);
       }
     },
     [question, mutation]
@@ -75,12 +74,7 @@ const Home: NextPage = () => {
         return (
           <div className="mt-12 w-1/2">
             <p className="text-2xl">{answerSnippet}</p>
-            <SyntaxHighlighter
-              language="typescript"
-              className="text-2xl text-sky-500"
-            >
-              {codeSnippet}
-            </SyntaxHighlighter>
+            <code className="text-2xl text-sky-500">{codeSnippet}</code>
           </div>
         );
       }
@@ -126,7 +120,7 @@ const Home: NextPage = () => {
             required
             onChange={onInputChange}
             value={question}
-            onKeyDown={handleKeyDown}
+            onKeyDown={(e) => void handleKeyDown(e)}
           />
         </div>
         {renderAnswer()}
