@@ -31,10 +31,15 @@ const Home: NextPage = () => {
       query = `Write a TypeScript code example answering the question: ${question}`;
     }
 
-    const response = await mutation.mutateAsync({ query });
-    console.log(response.parsedQuery);
-    const answer = response.parsedQuery.text;
-    setAnswer(answer);
+    try {
+      const response = await mutation.mutateAsync({ query });
+      console.log(response.parsedQuery);
+      const answer = response.parsedQuery.text;
+      setAnswer(answer);
+    } catch (error) {
+      setAnswer("Something went wrong. :(\nPlease try again.");
+      console.log(error);
+    }
 
     // TODO: Make this better to navigate
     // const sources = response.parsedQuery.sourceDocuments.map((document) => {
@@ -72,12 +77,13 @@ const Home: NextPage = () => {
         </div>
       );
     } else {
-      const answerKeywords = answer.split(" ");
+      const answerKeywords = answer.split("\n");
       const keywordIndex = answerKeywords.findIndex(
         (keyword) =>
           keyword.includes("class") ||
           keyword.includes("let") ||
           keyword.includes("const") ||
+          keyword.includes("this") ||
           keyword.includes("import")
       );
       const semicolonIndex = answerKeywords.findLastIndex(
@@ -88,7 +94,7 @@ const Home: NextPage = () => {
         const answerSnippet = answerKeywords.slice(0, keywordIndex).join(" ");
         const codeSnippet = answerKeywords
           .slice(keywordIndex, semicolonIndex + 1)
-          .join(" ")
+          .join("\n")
           .trim();
         return (
           <div className="mt-12 w-1/2">
