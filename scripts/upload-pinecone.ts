@@ -12,21 +12,32 @@ import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 import { PineconeStore } from "langchain/vectorstores/pinecone";
 import { PineconeClient } from "@pinecone-database/pinecone";
 
-const client = new PineconeClient();
-await client.init({
-  apiKey: process.env.PINECONE_API_KEY as string,
-  environment: process.env.PINECONE_ENVIRONMENT as string,
-});
-const pineconeIndex = client.Index(process.env.PINECONE_INDEX as string);
+import { PDFLoader } from "langchain/document_loaders/fs/pdf";
 
 async function loadCode() {
+  console.log("Loading Code...");
   const codeLoader = new DirectoryLoader("./data/code", {
     ".ts": (path) => new TextLoader(path),
     ".js": (path) => new TextLoader(path),
   });
 
   const codeDocs = await codeLoader.load();
+  const textSplitter = new RecursiveCharacterTextSplitter({
+    chunkSize: 500,
+    chunkOverlap: 100,
+  });
 
+  const codeOutput = await textSplitter.splitDocuments(codeDocs);
+  return codeOutput;
+}
+
+async function loadPDF() {
+  console.log("Loading PDFs...");
+  const pdfLoader = new DirectoryLoader("./data/pdfs", {
+    ".pdf": (path) => new PDFLoader(path),
+  });
+
+  const codeDocs = await pdfLoader.load();
   const textSplitter = new RecursiveCharacterTextSplitter({
     chunkSize: 500,
     chunkOverlap: 100,
@@ -37,6 +48,7 @@ async function loadCode() {
 }
 
 async function loadMarkdown() {
+  console.log("Loading Markdown...");
   const markdownLoader = new DirectoryLoader("./data/markdown", {
     ".md": (path) => new TextLoader(path),
     ".mdx": (path) => new TextLoader(path),
@@ -48,7 +60,7 @@ async function loadMarkdown() {
 
   for (let i = 0; i < markdownOutput.length; i++) {
     const chunk = markdownOutput[i];
-    if (!chunk) continue;
+    if (!chunk || chunk?.metadata?.source) continue;
 
     const oldPath = chunk.metadata.source;
     const newPath = oldPath.slice(
@@ -62,11 +74,18 @@ async function loadMarkdown() {
 }
 
 async function loadIntoPinecone() {
+  const client = new PineconeClient();
+  await client.init({
+    apiKey: process.env.PINECONE_API_KEY as string,
+    environment: process.env.PINECONE_ENVIRONMENT as string,
+  });
+
   const markdownOutput = await loadMarkdown();
   const codeOutput = await loadCode();
+  const pdfOutput = await loadPDF();
+  const combinedOutput = [...markdownOutput, ...codeOutput, ...pdfOutput];
 
-  const combinedOutput = [...markdownOutput, ...codeOutput];
-
+  const pineconeIndex = client.Index(process.env.PINECONE_INDEX as string);
   await PineconeStore.fromDocuments(combinedOutput, new OpenAIEmbeddings(), {
     pineconeIndex,
   });
@@ -77,4 +96,6 @@ async function main() {
   await loadIntoPinecone();
 }
 
-await main();
+main().then(() => {
+  process.exit(0);
+});
