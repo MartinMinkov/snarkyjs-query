@@ -41,10 +41,31 @@ export const queryRouter = createTRPCRouter({
         returnSourceDocuments: true,
       });
 
-      const response = await chain.call({
-        query,
-      });
-      const parsedQuery = queryResponse.parse(response);
+      let parsedQuery;
+      const maxRetries = 3;
+      const maxTime = 10000; // 10 seconds
+
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          const response = await Promise.race([
+            chain.call({
+              query,
+            }),
+            new Promise((_, reject) =>
+              setTimeout(reject, maxTime, "Request timed out")
+            ),
+          ]);
+          parsedQuery = queryResponse.parse(response);
+          break;
+        } catch (error) {
+          console.error(`Attempt ${i + 1} failed. Retrying...`, error);
+          await new Promise((resolve) => setTimeout(resolve, 1000)); // wait 1 second before retrying
+        }
+      }
+
+      if (!parsedQuery) {
+        throw new Error("Failed to get a response after 3 attempts");
+      }
 
       return {
         parsedQuery,
