@@ -21,14 +21,13 @@ const Home: NextPage = () => {
   // >([]);
 
   const makeQuery = async () => {
-    if (question === "" || selectedOption === "") {
-      return;
-    }
     let query;
-    if (selectedOption === "Explain") {
+    if (selectedOption === "explain") {
       query = `Explain the following question in a question and answer format. ${question}`;
-    } else {
+    } else if (selectedOption === "code") {
       query = `Write a TypeScript code example answering the question. ${question}`;
+    } else {
+      return;
     }
 
     try {
