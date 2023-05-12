@@ -1,0 +1,302 @@
+---
+title: 'Interacting with zkApps Server-Side'
+hide_title: true
+sidebar_label: 'Interacting with zkApps Server-Side'
+---
+
+:::info
+
+Please note that zkApp programmability is not yet available on Mina Mainnet, but
+zkApps can now be deployed to Berkeley Testnet.
+
+:::
+
+:::note
+
+This tutorial was last tested with [SnarkyJS](https://www.npmjs.com/package/snarkyjs) 0.8.0.
+
+:::
+
+# Interacting with zkApps server-side
+
+## Overview
+
+While user-facing zkApps can be written for the browser, sometimes it is useful to interact with a zkApp server-side, or from a developer's machine.
+
+This tutorial shows how to do this. This can be useful when initializing a zkApp using programmatically generated information, deploying a zkApp in custom ways, or writing scripts that create transactions depending on real world or on-chain events.
+
+To start this tutorial, read and complete [Tutorial 3](deploying-to-a-network), to see how to deploy a smart contract. We will use the same project used in Tutorial 3.
+
+Note Tutorial 3, and this tutorial, reuse the smart contract `Square` from [Tutorial 1](hello-world).
+
+## Interacting with our deployed Smart Contract
+
+Once you've created your project and deployed it following Tutorial 3, we can write a script to interact with our smart contract.
+
+### utils.ts
+
+We will be using a helper function to make this more convenient to write, in a `utils.ts` file. You can find this file [here](https://github.com/o1-labs/docs2/blob/main/examples/zkapps/interacting-with-zkApps-server-side/src/utils.ts). Please download this and place it in your project's `src` folder. It contains two functions:
+
+- `loopUntilAccountExists()` which waits until an account exists on Berkeley
+- `deploy()` which programmatically deploys your zkApp
+
+We recommend reading through this code, to understand what it is doing to implement its functionality.
+
+### Imports, main, and Mina.Network
+
+Open up `main.ts` in a text editor. You can find the complete source for this [here](https://github.com/o1-labs/docs2/blob/main/examples/zkapps/interacting-with-zkApps-server-side/src/main.ts).
+
+To start, let's add the imports and SnarkyJS setup:
+
+```ts
+  1 import { Square } from './Square.js';
+  2 import { isReady, shutdown, Mina, PrivateKey } from 'snarkyjs';
+  3
+  4 await isReady;
+  5
+  6 console.log('SnarkyJS loaded');
+  7
+  8 // ----------------------------------------------------
+  9
+ 10 // ----------------------------------------------------
+ 11
+ 12 console.log('Shutting down');
+ 13
+ 14 await shutdown();
+```
+
+So far nothing new - but now, let's add connecting to Berkeley:
+
+```ts
+...
+ 8 // ----------------------------------------------------
+ 9
+10 const Berkeley = Mina.Network(
+11   'https://proxy.berkeley.minaexplorer.com/graphql'
+12 );
+13 Mina.setActiveInstance(Berkeley);
+14
+15 const transactionFee = 100_000_000;
+16
+16 // ----------------------------------------------------...
+```
+
+In past tutorials, we set the active instance to a local blockchain, which is fast for development, but only available on one's local machine, and not decentralized.
+
+We are now setting the active instance to the remote Berkeley network. We are connecting to Berkeley through a GraphQL proxy, which is running a Mina node connected to the Berkeley network. By connecting to Berkeley, we can provide smart contracts that are globally accessible, and provide strong guarantees around state due to both Mina's decentralization and its succinct state proof.
+
+With the Ethereum Bridge (to be included in a future tutorial), states and proofs from smart contracts deployed on Mina networks can also be available on Ethereum and other EVM chains.
+
+We also set a transaction fee, which we'll use to pay for access to sending transactions and deploying smart contracts on Mina. Transaction fees in code are declared as nanomina. We will use a 0.1 Mina fee as default (100,000,000 nanomina) here.
+
+:::note
+
+While in this case we are connecting to a remote RPC (run by `minaexplorer.com`), you can also run a Mina node locally, and instead use its GraphQL endpoint. While in other blockchains this would be very heavyweight, because Mina is succinct this is actually a reasonable option. See [here](/node-operators/getting-started) to see how to do this.
+
+A version of the Mina node is in the works that runs directly in the browser and within the local node process, so client side users can connect directly to Mina with low resource requirements, while keeping full decentralization guarantees, with no intermediaries that can go down, censor, or otherwise impact you or your users' connection to the network.
+
+:::
+
+Now, to finish setting up our code, let's add to our `main.ts`:
+
+```ts
+...
+  2 import { isReady, shutdown, Mina, PrivateKey } from 'snarkyjs';
+  3
+  4 import fs from 'fs';
+  5
+...
+ 17 const transactionFee = 100_000_000;
+ 18
+ 19 const deployAlias = process.argv[2];
+ 20 const deployerKeysFileContents = fs.readFileSync(
+ 21   'keys/' + deployAlias + '.json',
+ 22   'utf8'
+ 23 );
+ 24 const deployerPrivateKeyBase58 = JSON.parse(
+ 25   deployerKeysFileContents
+ 26 ).privateKey;
+ 27 const deployerPrivateKey = PrivateKey.fromBase58(deployerPrivateKeyBase58);
+ 28 const deployerPublicKey = deployerPrivateKey.toPublicKey();
+ 29
+ 30 const zkAppPrivateKey = deployerPrivateKey;
+ 31
+ 32 // ----------------------------------------------------
+...
+```
+
+This uses the key generated by the `zk config` command, stored in `keys/`. The name of the key file will be provided through an argument on the command line (`process.argv[2]`).
+
+You can run this now with:
+
+```sh
+$ npm run build && node build/src/main.js berkeley
+```
+
+Which will read keys from `keys/berkeley.json`. Public and private keys in Mina are commonly stored in `base58` for easily readability. In Mina, public keys start with `B62`, and private keys start with `EKE` for easy differentiability.
+
+Our SmartContract is also deployed to the same account we deployed from. So we set `zkAppPrivateKey = deployerPrivateKey`. Depending on the application, it can also be useful to have separate keys for the zkApp and deployer accounts!
+
+### Waiting for accounts to be ready
+
+Next, we will wait for the deployer account to be ready.
+
+In main, we will import and use the `loopUntilAccountExists()` function from `utils.ts`:
+
+```ts
+...
+  4 import fs from 'fs';
+  5 import { loopUntilAccountExists } from './utils.js';
+  6
+  7 await isReady;
+...
+ 33 // ----------------------------------------------------
+ 34
+ 35 let account = await loopUntilAccountExists({
+ 36   account: deployerPublicKey,
+ 37   eachTimeNotExist: () => {
+ 38     console.log(
+ 39       'Deployer account does not exist. ' +
+ 40         'Request funds at faucet ' +
+ 41         'https://faucet.minaprotocol.com/?address=' +
+ 42         deployerPublicKey.toBase58()
+ 43     );
+ 44   },
+ 45   isZkAppAccount: false,
+ 46 });
+ 47
+ 48 console.log(
+ 49   `Using fee payer account with nonce ${account.nonce}, balance ${account.balance}`
+ 50 );
+ 51
+ 52 // ----------------------------------------------------
+...
+```
+
+We wait until our new deployment account exist - if it does not, we share a link with the user to go to the faucet and request funds.
+
+If the key created from the `zk deploy` command earlier in this tutorial has already been funded, then this should find the account and move on. If that transaction hasn't finished yet, then this will wait until that has completed.
+
+Once we find the account, we print out its nonce, and its balance.
+
+Moving on, we compile the smart contract, and wait for it to have been deployed:
+
+```ts
+...
+ 52 // ----------------------------------------------------
+ 53
+ 54 console.log('Compiling smart contract...');
+ 55 let { verificationKey } = await Square.compile();
+ 56
+ 57 const zkAppPublicKey = zkAppPrivateKey.toPublicKey();
+ 58 let zkapp = new Square(zkAppPublicKey);
+ 59
+ 60 // Programmatic deploy:
+ 61 //   Besides the CLI, you can also create accounts programmatically. This is useful if you need
+ 62 //   more custom account creation - say deploying a zkApp to a different key than the deployer
+ 63 //   key, programmatically parameterizing a zkApp before initializing it, or creating Smart
+ 64 //   Contracts programmatically for users as part of an application.
+ 65 // await deploy(deployerPrivateKey, zkAppPrivateKey, zkapp, verificationKey);
+ 66
+ 67 await loopUntilAccountExists({
+ 68   account: zkAppPublicKey,
+ 69   eachTimeNotExist: () =>
+ 70     console.log('waiting for zkApp account to be deployed...'),
+ 71   isZkAppAccount: true
+ 72 });
+ 73
+ 74 let num = (await zkapp.num.fetch())!;
+ 75 console.log(`current value of num is ${num}`);
+ 76
+ 77 // ----------------------------------------------------
+...
+```
+
+To do this, we reuse the helper function `loopUntilAccountExists()` from `utils.js`. This time, we pass in `isZkappAccount: true` which makes it not only check if the account exists, but also whether there is a verification key on the account. An existing verification key indicates that the zkApp has been successfully deployed.
+
+Note as we deployed our smart contract already with `zk deploy`, programmatic deploy is not needed, and is commented out here. If you would like to see how this works, or it's useful for your application, see code for this [here](https://github.com/o1-labs/docs2/blob/main/examples/zkapps/interacting-with-zkApps-server-side/src/utils.ts).
+
+After being certain that our zkApp has been deployed, we fetch the current value of `zkapp.num` (the on-chain we defined on the `SmartContract`) and log it. If this is the first time you run this script, the value should be `3` because that's how we set it in our smart contract's `init()` function. The `init()` function is called automatically during the first deploy (not during re-deploys).
+
+<!-- note: I'm commenting this out since setting `provedState` with `init()` doesn't work yet anyway because of the missing verification key protocol bug.
+
+:::info
+
+There is a `provedState` property on accounts present in the protocol, but yet to be exposed in SnarkyJS, that can be used to assert in a proof that the smart contract has been initialized.
+
+This `provedState` property starts out `false` when a contract is deployed. It is set to true whenever the _entire state_ of the smart contract is overwritten by a proof. TODO. More details will be released as this feature is made available.
+
+::: -->
+
+### Calling update on our transaction
+
+And lastly, let's now send an update to our transaction. If the zkApp was just initialized, this will call update on the newly initialized account. Otherwise, it will call update on whatever the current account state happens to be.
+
+```ts
+...
+ 77 // ----------------------------------------------------
+ 78
+ 79 let transaction = await Mina.transaction(
+ 80   { sender: deployerPublicKey, fee: transactionFee },
+ 81   () => {
+ 82     zkapp.update(num.mul(num));
+ 83   }
+ 84 );
+ 85
+ 86 // fill in the proof - this can take a while...
+ 87 console.log('Creating an execution proof...');
+ 88 let time0 = performance.now();
+ 89 await transaction.prove();
+ 90 let time1 = performance.now();
+ 91 console.log(`creating proof took ${(time1 - time0) / 1e3} seconds`);
+ 92
+ 93 // sign transaction with the deployer account
+ 94 transaction.sign([deployerPrivateKey]);
+ 95
+ 96 console.log('Sending the transaction...');
+ 97 let pendingTransaction = await transaction.send();
+ 98
+ 99 // ----------------------------------------------------
+...
+```
+
+To send an update transaction, we perform the following steps:
+
+1. Construct the transaction with `Mina.transaction`. This is where we call `zkapp.update()`, which is the custom method defined on our smart contract.
+2. Create a proof of the transaction. This can take up to a minute.
+3. Sign the transaction, and send it to the network.
+
+When sending the transaction using `transaction.send()`, we get back an object called `pendingTransaction`. This gives us info about how the transaction went and lets us wait for inclusion in a block:
+
+```ts
+ 99 // ----------------------------------------------------
+100
+101 if (!pendingTransaction.isSuccess) {
+102   console.log('error sending transaction (see above)');
+103   process.exit(0);
+104 }
+105
+106 console.log(
+107   `See transaction at https://berkeley.minaexplorer.com/transaction/${pendingTransaction.hash()}
+108 Waiting for transaction to be included...`
+109 );
+110 await pendingTransaction.wait();
+111
+112 console.log(`updated state! ${await zkapp.num.fetch()}`);
+113
+114 // ----------------------------------------------------
+```
+
+Here we use several functionalities of the pending transaction:
+
+- `pendingTransaction.isSuccess` is a boolean that tells us whether the transaction was successful. Most invalid transactions will be rejected by the GraphQL endpoint immediately and will have `isSuccess === false`.
+- `pendingTransaction.hash()` tells us the transaction hash, which you can use to look up the transaction in a block explorer. (If the transaction failed, this will return `undefined`).
+- `pendingTransaction.wait()` is especially useful: it returns a promise that only resolves after the transaction is included in the latest block on the network. This takes several minutes, so you might not want to block the main thread on this in a real application.
+
+Finally, after the transaction was successfully applied on the Mina blockchain, we can double-check that our state was updated by fetching it again with `zkapp.num.fetch()`.
+
+## Conclusion
+
+We have finished writing a script to initialize the state and interact with it! You can also run this script multiple times, and it should each time, update `x` to its square.
+
+Check out out our other tutorials and documentation to keep going!
