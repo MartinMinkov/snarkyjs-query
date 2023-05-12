@@ -43,7 +43,7 @@ export const queryRouter = createTRPCRouter({
 
       let parsedQuery;
       const maxRetries = 3;
-      const maxTime = 10000; // 10 seconds
+      const maxTime = 170000; // 17 seconds
 
       for (let i = 0; i < maxRetries; i++) {
         try {
