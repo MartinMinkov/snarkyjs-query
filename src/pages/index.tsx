@@ -23,12 +23,13 @@ const Home: NextPage = () => {
   const makeQuery = async () => {
     let query;
     if (selectedOption === "explain") {
-      query = `Explain the following question in a question and answer format. ${question}`;
+      query = `Explain the following question in a text format. ${question}`;
     } else if (selectedOption === "code") {
       query = `Write a TypeScript code example answering the question. ${question}`;
     } else {
       return;
     }
+    console.log(query);
 
     try {
       const response = await mutation.mutateAsync({ query });
