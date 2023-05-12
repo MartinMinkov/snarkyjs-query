@@ -28,7 +28,7 @@ async function loadCode() {
   const codeDocs = await codeLoader.load();
 
   const textSplitter = new RecursiveCharacterTextSplitter({
-    chunkSize: 600,
+    chunkSize: 500,
     chunkOverlap: 100,
   });
 
