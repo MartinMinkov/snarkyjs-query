@@ -13,7 +13,7 @@ const Home: NextPage = () => {
 
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
-  const [selectedOption, setSelectedOption] = useState<string>("");
+  const [selectedOption, setSelectedOption] = useState<string>("explain");
   // const [sources, setSources] = useState<
   //   {
   //     source: string;
@@ -28,7 +28,7 @@ const Home: NextPage = () => {
     if (selectedOption === "Explain") {
       query = `Explain the following question in a question and answer format. ${question}`;
     } else {
-      query = `Write a TypeScript code example answering the question: ${question}`;
+      query = `Write a TypeScript code example answering the question. ${question}`;
     }
 
     try {
@@ -65,7 +65,7 @@ const Home: NextPage = () => {
     setSelectedOption(event.target.value);
   };
 
-  const onClick = async () => {
+  const handleOnClick = async () => {
     await makeQuery();
   };
 
@@ -220,7 +220,7 @@ const Home: NextPage = () => {
             </label> */}
         </div>
         <button
-          onClick={onClick}
+          onClick={() => void handleOnClick()}
           className="mt-12 flex w-1/12 items-center justify-center rounded bg-blue-500 p-4 font-bold hover:bg-blue-700"
         >
           Answer
