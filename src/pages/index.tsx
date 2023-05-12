@@ -23,7 +23,7 @@ const Home: NextPage = () => {
   const makeQuery = async () => {
     let query;
     if (selectedOption === "explain") {
-      query = `Explain the following question. ${question}`;
+      query = `Give a detailed explanation of the following question. ${question}`;
     } else if (selectedOption === "code") {
       query = `Write a TypeScript code example answering the question. ${question}`;
     } else {
