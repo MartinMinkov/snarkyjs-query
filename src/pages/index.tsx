@@ -220,6 +220,9 @@ const Home: NextPage = () => {
             </label> */}
         </div>
         <button
+          disabled={
+            question === "" || selectedOption === "" || mutation.isLoading
+          }
           onClick={() => void handleOnClick()}
           className="mt-12 flex w-1/12 items-center justify-center rounded bg-blue-500 p-4 font-bold hover:bg-blue-700"
         >
