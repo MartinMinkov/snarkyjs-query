@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { type ChangeEvent, useState } from "react";
 import Head from "next/head";
 import { type NextPage } from "next";
 import SyntaxHighlighter from "react-syntax-highlighter";
@@ -13,41 +13,56 @@ const Home: NextPage = () => {
 
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
+  const [selectedOption, setSelectedOption] = useState<string>("");
   // const [sources, setSources] = useState<
   //   {
   //     source: string;
   //   }[]
   // >([]);
 
-  const onInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setQuestion(e.target.value);
-    },
-    []
-  );
+  const makeQuery = async () => {
+    if (question === "" || selectedOption === "") {
+      return;
+    }
+    let query;
+    if (selectedOption === "Explain") {
+      query = `Explain the following question in a question and answer format. ${question}`;
+    } else {
+      query = `Write a TypeScript code example answering the question: ${question}`;
+    }
 
-  const handleKeyDown = useCallback(
-    async (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter") {
-        if (question === "") {
-          return;
-        }
-        const response = await mutation.mutateAsync({ query: question });
-        console.log(response.parsedQuery);
-        const answer = response.parsedQuery.text;
-        setAnswer(answer);
+    const response = await mutation.mutateAsync({ query });
+    console.log(response.parsedQuery);
+    const answer = response.parsedQuery.text;
+    setAnswer(answer);
 
-        // const sources = response.parsedQuery.sourceDocuments.map((document) => {
-        //   const { metadata } = document;
-        //   return {
-        //     source: metadata.source,
-        //   };
-        // });
-        // setSources(sources);
-      }
-    },
-    [question, mutation]
-  );
+    // TODO: Make this better to navigate
+    // const sources = response.parsedQuery.sourceDocuments.map((document) => {
+    //   const { metadata } = document;
+    //   return {
+    //     source: metadata.source,
+    //   };
+    // });
+    // setSources(sources);
+  };
+
+  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuestion(e.target.value);
+  };
+
+  const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      await makeQuery();
+    }
+  };
+
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setSelectedOption(event.target.value);
+  };
+
+  const onClick = async () => {
+    await makeQuery();
+  };
 
   const renderAnswer = () => {
     if (mutation.isLoading) {
@@ -62,7 +77,8 @@ const Home: NextPage = () => {
         (keyword) =>
           keyword.includes("class") ||
           keyword.includes("let") ||
-          keyword.includes("const")
+          keyword.includes("const") ||
+          keyword.includes("import")
       );
       const semicolonIndex = answerKeywords.findLastIndex(
         (keyword) => keyword.includes(";") || keyword.includes("}")
@@ -71,8 +87,9 @@ const Home: NextPage = () => {
       if (keywordIndex !== -1 && semicolonIndex !== -1) {
         const answerSnippet = answerKeywords.slice(0, keywordIndex).join(" ");
         const codeSnippet = answerKeywords
-          .slice(keywordIndex + 1, semicolonIndex + 1)
-          .join(" ");
+          .slice(keywordIndex, semicolonIndex + 1)
+          .join(" ")
+          .trim();
         return (
           <div className="mt-12 w-1/2">
             <p className="text-2xl">{answerSnippet}</p>
@@ -117,7 +134,7 @@ const Home: NextPage = () => {
         <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16 "></div>
         <h1 className="text-6xl ">Ask a question about SnarkyJS!</h1>
         <div className="mt-12 w-1/2">
-          <label htmlFor="question" className="mb-2 block text-sm font-medium ">
+          <label htmlFor="question" className="mb-2 block text-xl font-medium ">
             Ask your question
           </label>
           <input
@@ -130,7 +147,79 @@ const Home: NextPage = () => {
             value={question}
             onKeyDown={(e) => void handleKeyDown(e)}
           />
+          <div className="mt-12 flex">
+            <div className="flex h-5 items-center">
+              <input
+                id="helper-radio"
+                aria-describedby="helper-radio-text"
+                type="radio"
+                value="explain"
+                className="h-4 w-4 border-gray-300 bg-gray-100 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-blue-600"
+                checked={selectedOption === "explain"}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="flex items-center gap-5">
+              <div className="ml-2">
+                <label htmlFor="helper-radio" className="text-xl font-medium ">
+                  Explanation
+                </label>
+                <p id="helper-radio-text" className="text-md">
+                  Explain the following question in a question and answer
+                  format.
+                </p>
+              </div>
+            </div>
+            <div className="flex h-5 items-center">
+              <input
+                id="helper-radio"
+                aria-describedby="helper-radio-text"
+                type="radio"
+                value="code"
+                className="h-4 w-4 border-gray-300 bg-gray-100 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-blue-600"
+                checked={selectedOption === "code"}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="flex items-center gap-5">
+              <div className="ml-2">
+                <label htmlFor="helper-radio" className="text-xl font-medium ">
+                  Code
+                </label>
+                <p id="helper-radio-text" className="text-md">
+                  Answer with a code example that answers the question.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* <label>
+              <input
+                type="radio"
+                value="Explain"
+                checked={selectedOption === "Explain"}
+                onChange={handleChange}
+              />
+              Explain
+            </label>
+
+            <label>
+              <input
+                type="radio"
+                value="Code"
+                checked={selectedOption === "Code"}
+                onChange={handleChange}
+              />
+              Code
+            </label> */}
         </div>
+        <button
+          onClick={onClick}
+          className="mt-12 flex w-1/12 items-center justify-center rounded bg-blue-500 p-4 font-bold hover:bg-blue-700"
+        >
+          Answer
+        </button>
+
         {renderAnswer()}
       </main>
     </>
