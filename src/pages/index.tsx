@@ -1,6 +1,9 @@
-import { type NextPage } from "next";
 import { useCallback, useState } from "react";
 import Head from "next/head";
+import { type NextPage } from "next";
+import SyntaxHighlighter from "react-syntax-highlighter";
+import { dracula } from "react-syntax-highlighter/dist/cjs/styles/prism";
+
 import { api } from "~/utils/api";
 
 import { Spinner } from "~/components/spinner";
@@ -70,11 +73,16 @@ const Home: NextPage = () => {
         const codeSnippet = answerKeywords
           .slice(keywordIndex + 1, semicolonIndex + 1)
           .join(" ");
-        console.log(codeSnippet);
         return (
           <div className="mt-12 w-1/2">
             <p className="text-2xl">{answerSnippet}</p>
-            <code className="text-2xl text-sky-500">{codeSnippet}</code>
+            <SyntaxHighlighter
+              language="typescript"
+              style={dracula}
+              className="text-2xl text-sky-500"
+            >
+              {codeSnippet}
+            </SyntaxHighlighter>
           </div>
         );
       }
