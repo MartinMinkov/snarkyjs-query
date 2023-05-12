@@ -9,6 +9,12 @@ async function buildPineconeClient() {
   return client;
 }
 
-const pinecone = buildPineconeClient();
+async function buildPineconeIndex() {
+  const client = await buildPineconeClient();
+  const index = client.Index(process.env.PINECONE_INDEX as string);
+  return index;
+}
+
+const pinecone = buildPineconeIndex();
 
 export { pinecone };

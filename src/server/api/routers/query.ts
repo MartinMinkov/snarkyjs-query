@@ -26,7 +26,7 @@ export const queryRouter = createTRPCRouter({
     .input(z.object({ query: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const { pinecone } = ctx;
-      const pineconeIndex = (await pinecone).Index(env.PINECONE_INDEX);
+      const pineconeIndex = await pinecone;
       const query = input.query;
 
       const vectorStore = await PineconeStore.fromExistingIndex(
