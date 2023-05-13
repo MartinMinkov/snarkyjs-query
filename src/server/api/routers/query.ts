@@ -36,6 +36,8 @@ export const queryRouter = createTRPCRouter({
       const model = new OpenAI({
         temperature: 0,
         verbose: env.VERBOSE_MODE === "true",
+        bestOf: 1,
+        maxTokens: -1,
       });
       const chain = RetrievalQAChain.fromLLM(model, vectorStore.asRetriever(), {
         returnSourceDocuments: true,
