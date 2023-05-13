@@ -138,8 +138,7 @@ const Home: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c] pb-32 text-white">
-        <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16 "></div>
-        <h1 className="text-6xl ">Ask a question about SnarkyJS!</h1>
+        <h1 className="text-center text-6xl">Ask a question about SnarkyJS!</h1>
         <div className="mt-12 w-1/2">
           <label htmlFor="question" className="mb-2 block text-xl font-medium ">
             Ask your question
@@ -177,7 +176,7 @@ const Home: NextPage = () => {
                 </p>
               </div>
             </div>
-            <div className="mt-4 flex h-5 items-center">
+            <div className="mt-12 flex h-5 items-center sm:mt-8">
               <div className="flex items-center gap-5">
                 <input
                   id="helper-radio"
