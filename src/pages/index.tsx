@@ -23,9 +23,9 @@ const Home: NextPage = () => {
   const makeQuery = async () => {
     let query;
     if (selectedOption === "explain") {
-      query = `Give a detailed explanation of the following question. ${question}`;
+      query = `Give a detailed explanation of the following question. Give as much detail as you can provide. Do not write any code examples. ${question}`;
     } else if (selectedOption === "code") {
-      query = `Write a TypeScript code example answering the question. ${question}`;
+      query = `Write a TypeScript code example answering the question. Do not use triple ticks for code examples. ${question}`;
     } else {
       return;
     }
