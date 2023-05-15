@@ -5,7 +5,7 @@ import { RetrievalQAChain } from "langchain/chains";
 import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 import { OpenAI } from "langchain/llms/openai";
 import { PineconeStore } from "langchain/vectorstores/pinecone";
-import { type PineconeClient } from "@pinecone-database/pinecone";
+import { PineconeClient } from "@pinecone-database/pinecone";
 import { env } from "~/env.mjs";
 
 const queryResponse = z.object({
@@ -25,8 +25,8 @@ const queryResponse = z.object({
 export const queryRouter = createTRPCRouter({
   query: publicProcedure
     .input(z.object({ query: z.string() }))
-    .mutation(async ({ input, ctx }) => {
-      const { pinecone } = ctx;
+    .mutation(async ({ input }) => {
+      const pinecone = new PineconeClient();
       await pinecone.init({
         apiKey: env.PINECONE_API_KEY,
         environment: env.PINECONE_ENVIRONMENT,
